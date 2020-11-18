@@ -115,6 +115,110 @@ class ToyPromise {
 
     return p;
   }
+
+  catch(onRejected) {
+    return this.then(undefined, onRejected);
+  }
+
+  finally(onResolved) {
+    return this.then(
+      (value) => ToyPromise.resolve(onResolved()).then(() => value),
+      (reason) =>
+        ToyPromise.resolve(onResolved()).then(() => {
+          throw reason;
+        })
+    );
+  }
+
+  static resolve(value) {
+    return new ToyPromise((resolve) => {
+      resolve(value);
+    });
+  }
+
+  static reject(reason) {
+    return new ToyPromise((resolve, reject) => {
+      reject(reason);
+    });
+  }
+  static all(promises) {
+    if (!Array.isArray(promises)) {
+      return TypeError(`TypeError: ${promises} is not array`);
+    }
+    return new ToyPromise((resolve, reject) => {
+      const result = [];
+      let resolvedCount = 0;
+
+      promises.forEach((promise, idx) => {
+        // 将所有对象首先转换为Promise再统一处理
+        ToyPromise.resolve(promise).then((value) => {
+          result[idx] = value;
+          if (++resolvedCount === promises.length) {
+            resolve(result);
+          }
+        }, reject);
+      });
+    });
+  }
+
+  static race(promises) {
+    if (!Array.isArray(promises)) {
+      return TypeError(`TypeError: ${promises} is not array`);
+    }
+    return new ToyPromise((resolve, reject) => {
+      promises.forEach((promise) => {
+        ToyPromise.resolve(promise).then(resolve, reject);
+      });
+    });
+  }
+
+  static any(promises) {
+    if (!Array.isArray(promises)) {
+      return TypeError(`TypeError: ${promises} is not array`);
+    }
+    return new ToyPromise((resolve, reject) => {
+      const result = [];
+      let resolvedCount = 0;
+
+      promises.forEach((promise, idx) => {
+        // 将所有对象首先转换为Promise再统一处理
+        ToyPromise.resolve(promise).then(resolve, (reason) => {
+          result[idx] = reason;
+          if (++resolvedCount === promises.length) {
+            reject(result);
+          }
+        });
+      });
+    });
+  }
+
+  static allSettled(promises) {
+    if (!Array.isArray(promises)) {
+      return TypeError(`TypeError: ${promises} is not array`);
+    }
+    return new ToyPromise((resolve, reject) => {
+      const result = [];
+      let resolvedCount = 0;
+
+      const saveResult = (data, idx) => {
+        result[idx] = data;
+        if (++resolvedCount === promises.length) {
+          resolve(result);
+        }
+      };
+
+      promises.forEach((promise, idx) => {
+        ToyPromise.resolve(promise).then(
+          (value) => {
+            saveResult(value, idx);
+          },
+          (reason) => {
+            saveResult(reason, idx);
+          }
+        );
+      });
+    });
+  }
 }
 
 function resolvePromise(promise, x, resolve, reject) {
