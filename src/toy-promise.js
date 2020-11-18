@@ -148,7 +148,10 @@ class ToyPromise {
     return new ToyPromise((resolve, reject) => {
       const result = [];
       let resolvedCount = 0;
-
+      // 空数组判断，防止Promise永远不结束
+      if (promises.length === 0) {
+        resolve(result);
+      }
       promises.forEach((promise, idx) => {
         // 将所有对象首先转换为Promise再统一处理
         ToyPromise.resolve(promise).then((value) => {
@@ -165,29 +168,14 @@ class ToyPromise {
     if (!Array.isArray(promises)) {
       return TypeError(`TypeError: ${promises} is not array`);
     }
+
     return new ToyPromise((resolve, reject) => {
+      if (promises.length === 0) {
+        resolve(undefined);
+      }
+
       promises.forEach((promise) => {
         ToyPromise.resolve(promise).then(resolve, reject);
-      });
-    });
-  }
-
-  static any(promises) {
-    if (!Array.isArray(promises)) {
-      return TypeError(`TypeError: ${promises} is not array`);
-    }
-    return new ToyPromise((resolve, reject) => {
-      const result = [];
-      let resolvedCount = 0;
-
-      promises.forEach((promise, idx) => {
-        // 将所有对象首先转换为Promise再统一处理
-        ToyPromise.resolve(promise).then(resolve, (reason) => {
-          result[idx] = reason;
-          if (++resolvedCount === promises.length) {
-            reject(result);
-          }
-        });
       });
     });
   }
@@ -207,6 +195,10 @@ class ToyPromise {
         }
       };
 
+      if (promises.length === 0) {
+        resolve(result);
+      }
+
       promises.forEach((promise, idx) => {
         ToyPromise.resolve(promise).then(
           (value) => {
@@ -216,6 +208,30 @@ class ToyPromise {
             saveResult(reason, idx);
           }
         );
+      });
+    });
+  }
+
+  static any(promises) {
+    if (!Array.isArray(promises)) {
+      return TypeError(`TypeError: ${promises} is not array`);
+    }
+    return new ToyPromise((resolve, reject) => {
+      const result = [];
+      let rejectedCount = 0;
+
+      if (promises.length === 0) {
+        resolve(undefined);
+      }
+
+      promises.forEach((promise, idx) => {
+        // 将所有对象首先转换为Promise再统一处理
+        ToyPromise.resolve(promise).then(resolve, (reason) => {
+          result[idx] = reason;
+          if (++rejectedCount === promises.length) {
+            reject(result);
+          }
+        });
       });
     });
   }
